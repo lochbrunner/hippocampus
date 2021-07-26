@@ -5,6 +5,7 @@ import logging
 from tqdm import tqdm
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torch.nn as nn
 from torchvision import datasets, transforms
 
@@ -15,9 +16,14 @@ import argparse
 logger = logging.getLogger(__name__)
 
 
+class Activation(nn.Module):
+    def forward(self, x):
+        return F.relu6(x*10)/6
+
+
 class Hippocampus(nn.Module):
     def hook(self, i, m, inputs, outputs):
-        x = outputs[0].detach().numpy().flatten()
+        x = outputs[0].detach().cpu().numpy().flatten()
         if self.neurons[i] is None:
             self.neurons[i] = x
         else:
@@ -36,10 +42,15 @@ class Hippocampus(nn.Module):
             module.register_forward_hook(do)
             return None
 
-        self.neurons = [hook_wrapper(module, i)
-                        for i, module in enumerate(layers)]
+        for layer in layers:
+            layer.weight.data = torch.from_numpy(
+                np.random.choice((0., 1.), layer.weight.shape, p=(0.9, 0.1))).type(torch.FloatTensor)
 
-        self.modules = [l for layer in layers for l in [layer, nn.Sigmoid()]]
+        self.neurons = [hook_wrapper(module, i)
+                        for i, module in enumerate(layers[1:])]
+
+        self.modules = [l for layer in layers for l in [
+            layer, Activation()]]
 
     def forward(self, x):
         for module in self.modules:
@@ -71,7 +82,7 @@ class Tops:
 
     def __str__(self):
         total = sum(self.tops)
-        return f'error: {(1.-self.tops[0]/total)*100}%'
+        return f'error: {(1.-self.tops[0]/total)*100:2f}%'
 
 
 def main(args):
@@ -92,6 +103,8 @@ def main(args):
 
     model = Hippocampus(
         nn.Conv2d(1, 32, 3, 1),
+        nn.Conv2d(32, 32, 3, 1),
+        nn.Conv2d(32, 32, 3, 1),
         nn.Conv2d(32, 32, 3, 1),
         nn.Conv2d(32, 32, 3, 1),
         nn.Conv2d(32, 32, 3, 1),

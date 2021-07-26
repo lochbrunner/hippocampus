@@ -1,8 +1,10 @@
 # Object classification without gradient descent
 
-Inspired by the Hippocampus.
+[![](docs/mnist.gif)](docs/mnist.gif)
 
-Finding corelation in the network.
+Inspired by the Hippocampus of the human brain, this small project tries to learn to classify images similarly.
+The neurons in our brain create connections when they frequently fire synchronously.
+These connections may lead to the fact that when one of these neurons gets stimulated, all the other connected neurons may be stimulated as well.
 
 ## Method
 
